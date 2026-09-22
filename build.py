@@ -63,9 +63,10 @@ def main():
         art_js(),
         "\n</script>\n",
         (SRC / "03-state.js").read_text(encoding="utf-8"),
-        (SRC / "04-sheet.js").read_text(encoding="utf-8"),
-        (SRC / "05-editor.js").read_text(encoding="utf-8"),
-        (SRC / "06-app.js").read_text(encoding="utf-8"),
+        (SRC / "04-i18n.js").read_text(encoding="utf-8"),
+        (SRC / "05-sheet.js").read_text(encoding="utf-8"),
+        (SRC / "06-editor.js").read_text(encoding="utf-8"),
+        (SRC / "07-app.js").read_text(encoding="utf-8"),
     ]
     OUT.write_text("".join(parts), encoding="utf-8")
     print("index.html écrit — %d Ko" % (OUT.stat().st_size // 1024))

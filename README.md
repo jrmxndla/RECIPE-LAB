@@ -26,8 +26,9 @@ fonctionnent, les exports non.
 ## Ce que fait l'outil
 
 Un menu d'accueil mène à la création ou à la reprise d'une fiche, et propose
-trois coloris d'interface (crème, jaune, inversé) mémorisés d'une session à
-l'autre.
+quatre coloris d'interface (poussin, crème, jaune, inversé) et trois langues
+d'interface (français, anglais, italien), mémorisés d'une session à l'autre. La
+langue de départ suit celle du navigateur.
 
 L'éditeur couvre l'en-tête (restaurant, logo, saison, date, chef, catégorie, nom
 du plat), les ingrédients en blocs titrés avec quantité et unité, les étapes de
@@ -52,31 +53,54 @@ lecteurs PDF ignorent ces octets.
 
 ### Format du classeur Excel
 
-Onglet `FICHE`, sept colonnes : `SECTION`, `RÉF`, `FRANÇAIS`, `ENGLISH`,
-`ITALIANO`, `QUANTITÉ`, `UNITÉ`.
+Le classeur reprend la disposition des fiches déjà utilisées en cuisine, sur trois
+onglets identiques : `FR`, `EN`, `IT`, plus un `LISEZ-MOI`.
 
-| SECTION | Rôle | RÉF |
-| --- | --- | --- |
-| `META` | en-tête de la fiche | nom du champ |
-| `ING_TITRE` | titre d'un bloc d'ingrédients | numéro du bloc |
-| `ING` | une ligne d'ingrédient | numéro du bloc parent |
-| `PREP_TITRE` | titre d'un bloc de préparation | numéro du bloc |
-| `PREP` | texte des étapes | numéro du bloc parent |
+Dans chaque onglet :
 
-Codes d'unité : `g` `kg` `ml` `cl` `l` `qs` `tsp` `tbsp` `pinch` `pc`.
+| Cellule | Contenu |
+| --- | --- |
+| `A1` / `B1` | restaurant / saison |
+| `A2` / `B2` | date (AAAA-MM-JJ) / chef |
+| `A3` / `B3` | nom du plat / catégorie |
+| ligne 5 | en-têtes : un bloc par paire de colonnes — titre du bloc, puis « Quantité » |
+| ligne 6 et suivantes | les ingrédients de chaque bloc, dans sa paire de colonnes |
+| ligne « PRÉPARATION » | ouvre la zone des étapes |
+| en dessous | pour chaque bloc : une ligne de titre, puis une ligne de texte fusionnée |
 
-L'outil sait générer un modèle vierge de ce classeur (*Exporter → Modèle Excel
-vierge*).
+Un bloc d'ingrédients de plus, ce sont deux colonnes de plus à droite. Un ingrédient
+de plus, c'est une ligne de plus. Les cases de langue laissées vides reprennent le
+français.
+
+Les quantités s'écrivent librement : `600 g`, `600GR`, `1 PC`, `100 ml`, `QS`, `PM`,
+`QB`, `2 c. à soupe`. `parseQty()` en extrait le nombre et le code d'unité (`g` `kg`
+`ml` `cl` `l` `qs` `tsp` `tbsp` `pinch` `pc`) ; sans unité reconnue elle retient le
+gramme, sans chiffre elle retient QS.
+
+L'import est tolérant. Si les onglets `FR` / `EN` / `IT` n'existent pas, le premier
+onglet est lu comme du français : c'est ce qui permet de reprendre une fiche déjà
+écrite par un chef sans rien y changer. Un titre de sous-bloc posé au milieu d'une
+colonne, sans quantité en face, est reconnu comme tel. Un texte long ou multiligne
+trouvé hors de la zone `PRÉPARATION` est traité comme des étapes, pas comme un
+ingrédient.
+
+Les classeurs à colonnes `SECTION` / `RÉF` produits par les versions 1.2 à 1.4
+restent lisibles : un onglet nommé `FICHE` bascule l'import sur l'ancien parseur.
+
+L'écriture passe par `xlsx-js-style`, un fork de SheetJS qui gère les styles de
+cellule — sans lui, la mise en forme serait perdue. Si son chargement échoue, le
+code retombe sur SheetJS et le classeur sort sans mise en forme.
 
 ## Développement
 
 ```
 src/01-head.html   interface : jetons de couleur, coloris, styles de la fiche A4
-src/02-body.html   structure : écran d'accueil et écran d'édition
+src/02-body.html   structure : accueil, page d'import, écran d'édition
 src/03-state.js    langues, unités, liste des polices, état, sauvegarde locale
-src/04-sheet.js    chargement des polices, rendu de la fiche A4, mise à l'échelle
-src/05-editor.js   génération des panneaux de formulaire
-src/06-app.js      roue chromatique, sélecteur de police, exports, imports, démarrage
+src/04-i18n.js     interface en français, anglais et italien
+src/05-sheet.js    chargement des polices, rendu de la fiche A4, mise à l'échelle
+src/06-editor.js   génération des panneaux de formulaire
+src/07-app.js      roue chromatique, sélecteur de police, exports, imports, démarrage
 build.py           assemble le tout en index.html
 assets/            illustrations et logo (WebP détouré)
 fonts/             Lineal en quatre graisses + sa licence

@@ -6,7 +6,7 @@
 (function(){
 "use strict";
 
-const VERSION = "1.2";
+const VERSION = "1.7";
 
 /* ---------- Langues & libellés de la fiche ---------- */
 const LANGS = ['fr','en','it'];
@@ -70,6 +70,44 @@ const FONTS = [
   {f:'Instrument Serif',w:'',            c:'Serif'},
   {f:'JetBrains Mono',  w:'400;700',     c:'Mono'}
 ];
+const XL_SHEET={fr:'FR',en:'EN',it:'IT'};
+const XL_T={
+  fr:{qty:'Quantité',prep:'PRÉPARATION',block:'Bloc'},
+  en:{qty:'Quantity',prep:'METHOD',block:'Block'},
+  it:{qty:'Quantità',prep:'PREPARAZIONE',block:'Blocco'}
+};
+const PREP_RE=/^\s*(pr[ée]paration|preparazione|method|metodo|[ée]tapes|steps|fasi)\s*$/i;
+const QTY_RE=/quantit|quantity|qty/i;
+const UNITMAP={g:'g',gr:'g',grs:'g',gramme:'g',grammes:'g',gram:'g',grams:'g',grammo:'g',grammi:'g',
+  kg:'kg',kgs:'kg',kilo:'kg',kilos:'kg',kilogramme:'kg',
+  ml:'ml',mls:'ml',cl:'cl',cls:'cl',l:'l',lt:'l',litre:'l',litres:'l',liter:'l',litro:'l',
+  qs:'qs',qb:'qs',pm:'qs',an:'qs',asneeded:'qs',qsp:'qs',
+  pc:'pc',pce:'pc',pces:'pc',pcs:'pc',piece:'pc',pieces:'pc',pz:'pc',pezzo:'pc',pezzi:'pc',u:'pc',un:'pc',unite:'pc',
+  cc:'tsp',tsp:'tsp',cac:'tsp',cacafe:'tsp',cuillereacafe:'tsp',cucchiaino:'tsp',teaspoon:'tsp',
+  cs:'tbsp',tbsp:'tbsp',cas:'tbsp',casoupe:'tbsp',cuillereasoupe:'tbsp',cucchiaio:'tbsp',tablespoon:'tbsp',
+  pincee:'pinch',pinch:'pinch',pizzico:'pinch'};
+function parseQty(v){
+  const raw=String(v==null?'':v).trim();
+  if(!raw) return {qty:'',unit:'g'};
+  const n=raw.match(/\d+(?:[.,]\d+)?/);
+  const qty=n?n[0].replace(',','.'):'';
+  let tok=raw.replace(/\d+(?:[.,]\d+)?/g,'');
+  tok=tok.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z]/g,'');
+  return {qty:qty, unit:UNITMAP[tok] || (qty?'g':'qs')};
+}
+function normDate(v){
+  const s=String(v==null?'':v).trim();
+  if(!s) return '';
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  let m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);
+  if(m) return m[3]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[1]).slice(-2);
+  m=s.match(/^(\d{4})[\/.](\d{1,2})[\/.](\d{1,2})$/);
+  if(m) return m[1]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[3]).slice(-2);
+  const d=new Date(s);
+  if(!isNaN(d.getTime()) && /\d{4}/.test(s)) return d.toISOString().slice(0,10);
+  return '';
+}
+
 const PRESET_COLORS = ['#FB511A','#F4EFE2','#F5F099','#1B1614','#FFFFFF','#0E564E','#1F6F63','#C8A24A','#8C1D18','#2B3A67','#E8E2D2','#6B6B6B'];
 
 /* ---------- Petits utilitaires ---------- */
@@ -103,6 +141,7 @@ const LIBS = {
     'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
     'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js']},
   xlsx:{test:()=>window.XLSX, urls:[
+    'https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js',
     'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
     'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js']}
 };
@@ -172,13 +211,13 @@ function blankState(){
     prep:[newGroupPrep()],
     img:{logo:null, bg:null, dish:null, table:null},
     style:{bg:'#F4EFE2', ink:'#1B1614', accent:'#FB511A', on:'#F4EFE2', rule:'#1B1614',
-           bgOpacity:0.10, titleFont:'Lineal', textFont:'Lineal'}
+           bgOpacity:0.10, titleFont:'Lineal', textFont:'Lineal', layout:'cols', dishPos:'left'}
   };
 }
 let S = blankState();
 let LANG = 'fr';
 let ZOOM = null;            // null = ajustement automatique
-const OPEN = new Set(['p1','p2','p3']);
+const OPEN = new Set(['pStyle','pHead','pIng']);
 
 /* ---------- Sauvegarde locale (navigateur uniquement) ---------- */
 const LSKEY='recipelab.draft.v1';
